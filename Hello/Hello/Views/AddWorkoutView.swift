@@ -8,28 +8,17 @@ struct AddWorkoutView: View {
     @State private var duration = ""
     @State private var calories = ""
     @State private var notes = ""
+    @State private var isAutoCalculate = true
     
-    // 用于显示运动强度建议
-    private var suggestedCalories: String {
-        guard let duration = Int(duration) else { return "" }
-        
-        let estimatedCalories: Int
-        switch selectedType {
-        case .running:
-            estimatedCalories = duration * 10  // 约10卡/分钟
-        case .cycling:
-            estimatedCalories = duration * 7   // 约7卡/分钟
-        case .swimming:
-            estimatedCalories = duration * 8   // 约8卡/分钟
-        case .yoga:
-            estimatedCalories = duration * 4   // 约4卡/分钟
-        case .weightTraining:
-            estimatedCalories = duration * 6   // 约6卡/分钟
-        case .walking:
-            estimatedCalories = duration * 5   // 约5卡/分钟
+    private var suggestedCalories: Int {
+        guard let durationInt = Int(duration) else { return 0 }
+        return Int(Double(durationInt) * selectedType.caloriesPerMinute)
+    }
+    
+    private func updateCalories() {
+        if isAutoCalculate {
+            calories = String(suggestedCalories)
         }
-        
-        return "建议值: 约\(estimatedCalories)千卡"
     }
     
     var body: some View {
@@ -41,17 +30,31 @@ struct AddWorkoutView: View {
                             Text(type.rawValue).tag(type)
                         }
                     }
+                    .onChange(of: selectedType) { _, _ in
+                        updateCalories()
+                    }
                     
                     TextField("运动时长（分钟）", text: $duration)
                         .keyboardType(.numberPad)
+                        .onChange(of: duration) { _, _ in
+                            updateCalories()
+                        }
                 }
                 
                 Section("消耗卡路里") {
+                    Toggle("自动计算卡路里", isOn: $isAutoCalculate)
+                        .onChange(of: isAutoCalculate) { _, newValue in
+                            if newValue {
+                                updateCalories()
+                            }
+                        }
+                    
                     TextField("消耗卡路里", text: $calories)
                         .keyboardType(.numberPad)
+                        .disabled(isAutoCalculate)
                     
                     if !duration.isEmpty {
-                        Text(suggestedCalories)
+                        Text("基于\(selectedType.rawValue)的平均消耗：\(suggestedCalories) 千卡")
                             .font(.caption)
                             .foregroundColor(.gray)
                     }
